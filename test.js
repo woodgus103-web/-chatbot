@@ -34,7 +34,7 @@ assert(firstText(answer("급여·근무시간")).includes("2,156,880원"));
 assert(firstText(answer("반복참여 제한")).includes("최대 2년"));
 
 // 고용업무
-const empLabels = ["고용업무 소개", "고용 서비스 절차", "이용 신청 방법", "직업평가", "구직 상담", "취업 알선", "취업 후 적응지도", "구인 업체 안내", "처음으로"];
+const empLabels = ["고용업무 소개", "고용 서비스 절차", "이용 신청 방법", "구직 상담", "취업 알선", "취업 후 적응지도", "구인 업체 안내", "처음으로"];
 assert.deepStrictEqual(labels(answer("고용업무")), empLabels);
 assert.deepStrictEqual(labels(answer("구직 상담")), empLabels);
 assert(firstText(answer("고용업무 소개")).includes("만 19세 이상"));
@@ -44,7 +44,6 @@ assert(firstText(answer("고용 절차가 궁금해요")).includes("일반고용
 assert(firstText(answer("고용업무 소개")).includes("031-467-7366"));
 assert(firstText(answer("참여 조건")).includes("031-467-7361"));
 assert.strictEqual(answer("이용 신청 방법").template.outputs[1].basicCard.buttons[0].phoneNumber, "0314677366");
-assert.strictEqual(answer("직업평가").template.outputs[1].basicCard.buttons[0].phoneNumber, "0314677366");
 assert(firstText(answer("이용 신청 방법")).includes("상담 일정을 조율"));
 assert(firstText(answer("구직 상담")).includes("모의 면접"));
 assert(firstText(answer("취업 알선")).includes("구인포털"));
@@ -52,6 +51,8 @@ assert(firstText(answer("취업 후 적응지도")).includes("계속 유지"));
 assert(firstText(answer("구인 업체 안내")).includes("한국장애인고용공단"));
 assert(firstText(answer("이력서 써 주나요")).includes("자기소개서"));
 assert(firstText(answer("면접 준비 어떻게 해요")).includes("모의 면접"));
+// 직업평가는 고용업무 범위가 아니므로 답을 찾지 못해야 한다
+assert(firstText(answer("직업평가는 어떻게 받나요")).includes("찾지 못했습니다"));
 assert(firstText(answer("장애인 직원을 뽑고 싶은 사업주입니다")).includes("고용제도"));
 assert(firstText(answer("취업하고 나서도 도와주나요")).includes("유지"));
 
@@ -71,7 +72,6 @@ assert(firstText(answer("동점이면 누가 먼저 뽑혀요")).includes("1순�
 const call = answer("상담사 연결");
 assert.strictEqual(call.template.outputs[1].basicCard.buttons[0].phoneNumber, "0314677361");
 assert(answer("이용 신청 방법").template.outputs[1].basicCard);
-assert(answer("직업평가").template.outputs[1].basicCard);
 
 // 모르는 질문은 안내 후 전화 카드
 const unknown = answer("오늘 날씨 어때요");
