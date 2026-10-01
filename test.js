@@ -8,7 +8,7 @@ const labels = (r) => r.template.quickReplies.map((q) => q.label);
 // 첫 인사: 상위 메뉴 버튼이 나온다
 const home = answer("처음으로");
 assert(firstText(home).includes("안내 챗봇"));
-assert.deepStrictEqual(labels(home), ["장애인일자리사업", "고용업무", "직업평가 문의", "상담사 연결", "처음으로"]);
+assert.deepStrictEqual(labels(home), ["장애인일자리사업", "민간일자리 취업지원", "직업평가 문의", "상담사 연결", "처음으로"]);
 assert(firstText(answer("")).includes("안내 챗봇"));
 assert(firstText(answer("웰컴")).includes("안내 챗봇"));
 
@@ -33,26 +33,28 @@ assert(firstText(answer("참여 제외 대상")).includes("직장가입자"));
 assert(firstText(answer("급여·근무시간")).includes("2,156,880원"));
 assert(firstText(answer("반복참여 제한")).includes("최대 2년"));
 
-// 그림 (고용 서비스 절차)
-const withImg = answer("고용 서비스 절차", "https://example.com");
+// 그림 (취업지원 절차)
+const withImg = answer("취업지원 절차", "https://example.com");
 const imgs = withImg.template.outputs.filter((o) => o.simpleImage);
 assert.strictEqual(imgs.length, 2);
 assert.strictEqual(imgs[0].simpleImage.imageUrl, "https://example.com/images/employment-general.png");
 assert(imgs.every((o) => o.simpleImage.altText.length > 10));
 assert(withImg.template.outputs.length <= 3);
-assert(answer("고용 서비스 절차").template.outputs.every((o) => !o.simpleImage));
+assert(answer("취업지원 절차").template.outputs.every((o) => !o.simpleImage));
 const fs = require("fs");
 for (const o of imgs) assert(fs.existsSync("public/images/" + o.simpleImage.imageUrl.split("/").pop()));
 
-// 고용업무
-const empLabels = ["고용업무 소개", "고용 서비스 절차", "이용 신청 방법", "구직 상담", "취업 알선", "취업 후 적응지도", "구인 업체 안내", "처음으로"];
-assert.deepStrictEqual(labels(answer("고용업무")), empLabels);
+// 민간일자리 취업지원
+const empLabels = ["취업지원 소개", "취업지원 절차", "이용 신청 방법", "구직 상담", "취업 알선", "취업 후 적응지도", "구인 업체 안내", "처음으로"];
+assert.deepStrictEqual(labels(answer("민간일자리 취업지원")), empLabels);
 assert.deepStrictEqual(labels(answer("구직 상담")), empLabels);
-assert(firstText(answer("고용업무 소개")).includes("만 19세 이상"));
-assert(firstText(answer("고용 서비스 절차")).includes("현장훈련 및 지원"));
+assert(firstText(answer("취업지원 소개")).includes("만 19세 이상"));
+assert(firstText(answer("취업지원 절차")).includes("현장훈련 및 지원"));
 assert(firstText(answer("지원고용은 어떻게 진행돼요")).includes("지원 계획 수립"));
 assert(firstText(answer("고용 절차가 궁금해요")).includes("일반고용"));
-assert(firstText(answer("고용업무 소개")).includes("031-467-7366"));
+assert(firstText(answer("고용업무가 뭐예요")).includes("궁금한 점"));
+assert(firstText(answer("취업지원이 뭐예요")).includes("만 19세 이상"));
+assert(firstText(answer("취업지원 소개")).includes("031-467-7366"));
 assert(firstText(answer("참여 조건")).includes("031-467-7361"));
 assert.strictEqual(answer("이용 신청 방법").template.outputs[1].basicCard.buttons[0].phoneNumber, "0314677366");
 assert(firstText(answer("이용 신청 방법")).includes("상담 일정을 조율"));
@@ -92,7 +94,7 @@ assert(firstText(unknown).includes("찾지 못했습니다"));
 assert(unknown.template.outputs[1].basicCard);
 
 // 카카오 규칙 확인: 모든 답변에서 버튼 이름 14자 이하, 10개 이하, 글자 수 1000자 이하
-for (const q of ["처음으로", "장애인일자리사업", ...jobLabels.slice(0, -1), "고용업무", ...empLabels.slice(0, -1), "직업평가 문의", "상담사 연결"]) {
+for (const q of ["처음으로", "장애인일자리사업", ...jobLabels.slice(0, -1), "민간일자리 취업지원", ...empLabels.slice(0, -1), "직업평가 문의", "상담사 연결"]) {
   const r = answer(q);
   assert(r.template.quickReplies.length <= 10);
   r.template.quickReplies.forEach((b) => assert(b.label.length <= 14, b.label));
