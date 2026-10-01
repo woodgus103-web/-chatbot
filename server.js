@@ -31,9 +31,25 @@ function flatten(items, parent = null, out = []) {
 
 const squash = (s) => s.replace(/\s+/g, "");
 
-function buttonsFor(items) {
+// 지금이 운영시간인지 확인한다. 한국 시간(UTC+9) 기준이며, 요일·시간·휴무일은 content.json의 "운영"에서 정한다.
+function isOpenNow(content, now) {
+  const op = content.운영;
+  if (!op) return true;
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const date = kst.toISOString().slice(0, 10);
+  const minutes = kst.getUTCHours() * 60 + kst.getUTCMinutes();
+  const toMin = (hhmm) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
+  if (!op.요일.includes(kst.getUTCDay())) return false;
+  if ((op.휴무일 || []).includes(date)) return false;
+  return minutes >= toMin(op.시작) && minutes < toMin(op.끝);
+}
+
+function buttonsFor(items, open = true, afterHoursItem = null) {
+  // 운영시간 외에만 보이는 버튼(연락 요청)은 운영시간 중에는 숨기고, 운영시간 외에는 모든 화면에 붙인다.
+  let shown = items.filter((m) => !(m.운영시간외에만표시 && open));
+  if (!open && afterHoursItem && !shown.includes(afterHoursItem)) shown = [...shown, afterHoursItem];
   // 카카오 규칙: 버튼 이름은 14자 이하, 최대 10개. '처음으로' 버튼 한 자리를 남긴다.
-  const list = items.slice(0, 9).map((m) => ({
+  const list = shown.slice(0, 9).map((m) => ({
     label: m.제목,
     action: "message",
     messageText: m.제목,
@@ -100,20 +116,36 @@ function findNode(nodes, utterance) {
   return pick(nodes.filter((n) => !n.item.하위)) || pick(nodes.filter((n) => n.item.하위));
 }
 
-function answer(utterance, baseUrl = "") {
+// 운영시간 외에 전화번호를 안내하는 답변에는 안내 문구를 덧붙인다.
+function withNotice(base, content, org, open) {
+  if (open || !content.운영시간외안내) return base;
+  const notice = fillTemplate(content.운영시간외안내, org);
+  return `${base.slice(0, Math.max(0, 1000 - notice.length - 2))}\n\n${notice}`;
+}
+
+function answer(utterance, baseUrl = "", now = new Date()) {
   const content = loadContent();
   const org = content.기관;
   const top = content.메뉴;
+  const open = isOpenNow(content, now);
+  const flat = flatten(top);
+  const afterHours = (flat.find((n) => n.item.운영시간외에만표시) || {}).item || null;
   const u = (utterance || "").trim();
 
-  if (!u || HOME_WORDS.includes(u)) return reply([text(content.첫인사)], buttonsFor(top));
+  if (!u || HOME_WORDS.includes(u)) {
+    return reply([text(withNotice(content.첫인사, content, org, open))], buttonsFor(top, open, afterHours));
+  }
 
-  const node = findNode(flatten(top), u);
-  if (!node) return reply([text(fillTemplate(content.답변못찾음, org)), callCard(org)], buttonsFor(top));
+  const node = findNode(flat, u);
+  if (!node) {
+    return reply([text(withNotice(fillTemplate(content.답변못찾음, org), content, org, open)), callCard(org)], buttonsFor(top, open, afterHours));
+  }
 
   const { item, parent } = node;
-  let outputs = [text(fillTemplate(item.답변, org))];
-  // 외부 링크(예: 상담 신청 양식)가 있으면 카드로 붙인다. 주소가 https로 시작하지 않으면 '준비 중' 안내를 보낸다.
+  const hasPhone = item.전화버튼 || /\{(고용)?문의번호\}/.test(item.답변);
+  const base = fillTemplate(item.답변, org);
+  let outputs = [text(hasPhone && !item.운영시간외에만표시 ? withNotice(base, content, org, open) : base)];
+  // 외부 링크(예: 연락 요청 양식)가 있으면 카드로 붙인다. 주소가 https로 시작하지 않으면 '준비 중' 안내를 보낸다.
   if (item.링크) {
     if (/^https:\/\//.test(item.링크.주소 || "")) outputs.push(linkCard(item.링크));
     else outputs = [text(fillTemplate(item.링크.준비중답변, org)), callCard(org)];
@@ -123,7 +155,7 @@ function answer(utterance, baseUrl = "") {
   if (item.전화버튼) outputs.push(callCard(org, item.문의번호키 || (parent && parent.문의번호키) || "문의번호"));
 
   // 하위 메뉴가 있으면 그 메뉴를, 없으면 같은 단계의 다른 메뉴를 버튼으로 보여준다.
-  const buttons = item.하위 ? buttonsFor(item.하위) : buttonsFor(parent ? parent.하위 : top);
+  const buttons = item.하위 ? buttonsFor(item.하위, open, afterHours) : buttonsFor(parent ? parent.하위 : top, open, afterHours);
   return reply(outputs, buttons);
 }
 

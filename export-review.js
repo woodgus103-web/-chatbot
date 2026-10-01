@@ -8,12 +8,13 @@ const lines = [`# ${org.이름} ${org.팀} 안내 챗봇 검토용 문구`, "", 
 const walk = (items, depth) => {
   for (const m of items) {
     lines.push(`${"#".repeat(depth)} ${m.제목}`, "", fill(m.답변), "");
+    if (m.운영시간외에만표시) lines.push("(이 버튼은 운영시간이 아닐 때만 보인다)", "");
     if (m.링크) lines.push(`(양식 링크 버튼: ${m.링크.주소 || "아직 연결 전. 양식 준비 후 연결"})`, "");
     if (m.전화버튼) lines.push(`(전화 걸기 버튼: ${org.문의번호})`, "");
     if (m.하위) walk(m.하위, depth + 1);
   }
 };
-lines.push("## 첫 인사", "", fill(content.첫인사), "", "## 답을 찾지 못했을 때", "", fill(content.답변못찾음), "");
+lines.push(`## 운영시간이 아닐 때 덧붙는 안내`, "", fill(content.운영시간외안내), "", "## 첫 인사", "", fill(content.첫인사), "", "## 답을 찾지 못했을 때", "", fill(content.답변못찾음), "");
 walk(content.메뉴, 2);
 fs.writeFileSync("검토용_안내문구.md", lines.join("\n"), "utf8");
 console.log("검토용_안내문구.md 저장 완료");
