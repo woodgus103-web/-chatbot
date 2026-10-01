@@ -19,22 +19,30 @@ function fillTemplate(text, org) {
   return text.replace(/\{(.+?)\}/g, (whole, key) => org[key] ?? whole);
 }
 
-function quickReplies(content) {
-  // 카카오 규칙: 버튼 이름은 14자 이하, 최대 10개
-  const items = content.메뉴.map((m) => ({
+// 메뉴를 한 줄로 펼치면서 각 항목이 어느 메뉴 아래에 있는지(부모)를 기록한다.
+function flatten(items, parent = null, out = []) {
+  for (const item of items) {
+    out.push({ item, parent });
+    if (item.하위) flatten(item.하위, item, out);
+  }
+  return out;
+}
+
+const squash = (s) => s.replace(/\s+/g, "");
+
+function buttonsFor(items) {
+  // 카카오 규칙: 버튼 이름은 14자 이하, 최대 10개. '처음으로' 버튼 한 자리를 남긴다.
+  const list = items.slice(0, 9).map((m) => ({
     label: m.제목,
     action: "message",
     messageText: m.제목,
   }));
-  items.push({ label: "처음으로", action: "message", messageText: "처음으로" });
-  return items.slice(0, 10);
+  list.push({ label: "처음으로", action: "message", messageText: "처음으로" });
+  return list;
 }
 
-function reply(outputs, content) {
-  return {
-    version: "2.0",
-    template: { outputs, quickReplies: quickReplies(content) },
-  };
+function reply(outputs, buttons) {
+  return { version: "2.0", template: { outputs, quickReplies: buttons } };
 }
 
 function text(t) {
@@ -51,40 +59,49 @@ function callCard(org) {
   };
 }
 
-function findMenu(content, utterance) {
-  const u = utterance.replace(/\s+/g, "");
+function findNode(nodes, utterance) {
+  const u = squash(utterance);
   // 1순위: 버튼 이름과 정확히 같은 경우
-  const exact = content.메뉴.find((m) => m.제목.replace(/\s+/g, "") === u);
+  const exact = nodes.find((n) => squash(n.item.제목) === u);
   if (exact) return exact;
-  // 2순위: 키워드가 문장 안에 들어 있는 경우. 맞은 키워드가 가장 많고 긴 항목을 고른다.
-  let best = null;
-  let bestScore = 0;
-  for (const m of content.메뉴) {
-    const score = m.키워드
-      .map((k) => k.replace(/\s+/g, ""))
-      .filter((k) => u.includes(k))
-      .reduce((sum, k) => sum + k.length, 0);
-    if (score > bestScore) {
-      best = m;
-      bestScore = score;
+  // 2순위: 키워드가 문장 안에 들어 있는 경우.
+  // 세부 항목(하위 메뉴가 없는 항목)을 먼저 찾고, 없을 때만 상위 메뉴를 고른다.
+  const pick = (candidates) => {
+    let best = null;
+    let bestScore = 0;
+    for (const n of candidates) {
+      const score = n.item.키워드
+        .map(squash)
+        .filter((k) => u.includes(k))
+        .reduce((sum, k) => sum + k.length, 0);
+      if (score > bestScore) {
+        best = n;
+        bestScore = score;
+      }
     }
-  }
-  return best;
+    return best;
+  };
+  return pick(nodes.filter((n) => !n.item.하위)) || pick(nodes.filter((n) => n.item.하위));
 }
 
 function answer(utterance) {
   const content = loadContent();
   const org = content.기관;
+  const top = content.메뉴;
   const u = (utterance || "").trim();
 
-  if (!u || HOME_WORDS.includes(u)) return reply([text(content.첫인사)], content);
+  if (!u || HOME_WORDS.includes(u)) return reply([text(content.첫인사)], buttonsFor(top));
 
-  const menu = findMenu(content, u);
-  if (!menu) return reply([text(fillTemplate(content.답변못찾음, org)), callCard(org)], content);
+  const node = findNode(flatten(top), u);
+  if (!node) return reply([text(fillTemplate(content.답변못찾음, org)), callCard(org)], buttonsFor(top));
 
-  const outputs = [text(fillTemplate(menu.답변, org))];
-  if (menu.전화버튼) outputs.push(callCard(org));
-  return reply(outputs, content);
+  const { item, parent } = node;
+  const outputs = [text(fillTemplate(item.답변, org))];
+  if (item.전화버튼) outputs.push(callCard(org));
+
+  // 하위 메뉴가 있으면 그 메뉴를, 없으면 같은 단계의 다른 메뉴를 버튼으로 보여준다.
+  const buttons = item.하위 ? buttonsFor(item.하위) : buttonsFor(parent ? parent.하위 : top);
+  return reply(outputs, buttons);
 }
 
 const server = http.createServer((req, res) => {
