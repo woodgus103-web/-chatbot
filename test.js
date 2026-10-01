@@ -33,6 +33,17 @@ assert(firstText(answer("참여 제외 대상")).includes("직장가입자"));
 assert(firstText(answer("급여·근무시간")).includes("2,156,880원"));
 assert(firstText(answer("반복참여 제한")).includes("최대 2년"));
 
+// 그림 (고용 서비스 절차)
+const withImg = answer("고용 서비스 절차", "https://example.com");
+const imgs = withImg.template.outputs.filter((o) => o.simpleImage);
+assert.strictEqual(imgs.length, 2);
+assert.strictEqual(imgs[0].simpleImage.imageUrl, "https://example.com/images/employment-general.png");
+assert(imgs.every((o) => o.simpleImage.altText.length > 10));
+assert(withImg.template.outputs.length <= 3);
+assert(answer("고용 서비스 절차").template.outputs.every((o) => !o.simpleImage));
+const fs = require("fs");
+for (const o of imgs) assert(fs.existsSync("public/images/" + o.simpleImage.imageUrl.split("/").pop()));
+
 // 고용업무
 const empLabels = ["고용업무 소개", "고용 서비스 절차", "이용 신청 방법", "구직 상담", "취업 알선", "취업 후 적응지도", "구인 업체 안내", "처음으로"];
 assert.deepStrictEqual(labels(answer("고용업무")), empLabels);

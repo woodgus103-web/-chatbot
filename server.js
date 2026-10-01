@@ -7,6 +7,7 @@ const fs = require("fs");
 const path = require("path");
 
 const CONTENT_PATH = path.join(__dirname, "content.json");
+const PUBLIC_DIR = path.join(__dirname, "public");
 const PORT = process.env.PORT || 3000;
 const HOME_WORDS = ["처음으로", "시작", "메뉴", "안녕", "안녕하세요", "도움말", "웰컴", "welcome", "Welcome"];
 
@@ -49,6 +50,10 @@ function text(t) {
   return { simpleText: { text: t.slice(0, 1000) } };
 }
 
+function imageOutput(baseUrl, img) {
+  return { simpleImage: { imageUrl: `${baseUrl}/images/${encodeURIComponent(img.파일)}`, altText: img.설명 } };
+}
+
 function callCard(org, key = "문의번호") {
   const number = org[key];
   return {
@@ -85,7 +90,7 @@ function findNode(nodes, utterance) {
   return pick(nodes.filter((n) => !n.item.하위)) || pick(nodes.filter((n) => n.item.하위));
 }
 
-function answer(utterance) {
+function answer(utterance, baseUrl = "") {
   const content = loadContent();
   const org = content.기관;
   const top = content.메뉴;
@@ -98,6 +103,8 @@ function answer(utterance) {
 
   const { item, parent } = node;
   const outputs = [text(fillTemplate(item.답변, org))];
+  // 그림이 있으면 글 안내 뒤에 붙인다. 글이 먼저 나가므로 그림이 안 보이는 환경에서도 내용을 알 수 있다.
+  if (baseUrl && item.이미지) for (const img of item.이미지) outputs.push(imageOutput(baseUrl, img));
   if (item.전화버튼) outputs.push(callCard(org, item.문의번호키 || (parent && parent.문의번호키) || "문의번호"));
 
   // 하위 메뉴가 있으면 그 메뉴를, 없으면 같은 단계의 다른 메뉴를 버튼으로 보여준다.
@@ -110,6 +117,18 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
     return res.end("희망나래장애인복지관 직업지원팀 챗봇 서버가 켜져 있습니다.");
   }
+  if (req.method === "GET" && req.url.startsWith("/images/")) {
+    // public/images 폴더 안의 파일만 내보낸다. (폴더 밖 접근 차단)
+    const name = path.basename(decodeURIComponent(req.url.slice("/images/".length).split("?")[0]));
+    const file = path.join(PUBLIC_DIR, "images", name);
+    if (!/\.(png|jpg|jpeg)$/i.test(name) || !fs.existsSync(file)) {
+      res.writeHead(404);
+      return res.end();
+    }
+    const type = /\.png$/i.test(name) ? "image/png" : "image/jpeg";
+    res.writeHead(200, { "Content-Type": type, "Cache-Control": "public, max-age=3600" });
+    return fs.createReadStream(file).pipe(res);
+  }
   if (req.method === "POST" && req.url === "/skill") {
     let body = "";
     req.on("data", (chunk) => (body += chunk));
@@ -121,7 +140,8 @@ const server = http.createServer((req, res) => {
         // 형식이 다르면 빈 문장으로 보고 첫 인사를 보낸다.
       }
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify(answer(utterance)));
+      const base = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || `https://${req.headers["x-forwarded-host"] || req.headers.host}`;
+      res.end(JSON.stringify(answer(utterance, base)));
     });
     return;
   }
