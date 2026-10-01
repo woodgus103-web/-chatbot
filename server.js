@@ -49,12 +49,13 @@ function text(t) {
   return { simpleText: { text: t.slice(0, 1000) } };
 }
 
-function callCard(org) {
+function callCard(org, key = "문의번호") {
+  const number = org[key];
   return {
     basicCard: {
       title: `${org.이름} ${org.팀}`,
-      description: `문의 전화 ${org.문의번호}\n${org.운영시간}`,
-      buttons: [{ action: "phone", label: "전화 걸기", phoneNumber: org.문의번호.replace(/-/g, "") }],
+      description: `문의 전화 ${number}\n${org.운영시간}`,
+      buttons: [{ action: "phone", label: "전화 걸기", phoneNumber: number.replace(/-/g, "") }],
     },
   };
 }
@@ -97,7 +98,7 @@ function answer(utterance) {
 
   const { item, parent } = node;
   const outputs = [text(fillTemplate(item.답변, org))];
-  if (item.전화버튼) outputs.push(callCard(org));
+  if (item.전화버튼) outputs.push(callCard(org, item.문의번호키 || (parent && parent.문의번호키) || "문의번호"));
 
   // 하위 메뉴가 있으면 그 메뉴를, 없으면 같은 단계의 다른 메뉴를 버튼으로 보여준다.
   const buttons = item.하위 ? buttonsFor(item.하위) : buttonsFor(parent ? parent.하위 : top);
