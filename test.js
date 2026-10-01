@@ -13,7 +13,8 @@ assert(firstText(answer("")).includes("안내 챗봇"));
 
 // 상위 메뉴를 누르면 하위 메뉴 버튼이 나온다
 const jobs = answer("장애인일자리사업");
-assert.deepStrictEqual(labels(jobs), ["선발 절차", "참여 조건", "모집 기관", "모집 기간", "처음으로"]);
+const jobLabels = ["사업 유형", "선발 절차", "참여 조건", "참여 제외 대상", "제출 서류", "모집 기관", "모집 기간", "급여·근무시간", "반복참여 제한", "처음으로"];
+assert.deepStrictEqual(labels(jobs), jobLabels);
 
 // 버튼 이름 그대로 눌렀을 때
 assert(firstText(answer("선발 절차")).includes("모집공고"));
@@ -22,13 +23,26 @@ assert(firstText(answer("모집 기관")).includes("의왕시청"));
 assert(firstText(answer("모집 기간")).includes("지원형: 4월"));
 
 // 세부 항목에서는 같은 단계의 다른 항목 버튼이 나온다
-assert.deepStrictEqual(labels(answer("참여 조건")), ["선발 절차", "참여 조건", "모집 기관", "모집 기간", "처음으로"]);
+assert.deepStrictEqual(labels(answer("참여 조건")), jobLabels);
+
+// 새로 추가한 세부 항목
+assert(firstText(answer("사업 유형")).includes("계약기간 6개월"));
+assert(firstText(answer("제출 서류")).includes("참여신청서"));
+assert(firstText(answer("참여 제외 대상")).includes("직장가입자"));
+assert(firstText(answer("급여·근무시간")).includes("2,156,880원"));
+assert(firstText(answer("반복참여 제한")).includes("최대 2년"));
 
 // 문장으로 물었을 때(키워드 찾기)
 assert(firstText(answer("장애인일자리 선발 절차가 어떻게 되나요?")).includes("서류심사"));
 assert(firstText(answer("지원형은 언제 모집해요?")).includes("지원형: 4월"));
 assert(firstText(answer("의왕시 안 살아도 신청할 수 있나요")).includes("의왕시에 거주"));
-assert(firstText(answer("일자리사업이 뭐예요")).includes("궁금하신 항목"));
+assert(firstText(answer("일자리사업이 뭐예요")).includes("직접 입력"));
+assert(firstText(answer("지원형은 계약기간이 얼마나 돼요?")).includes("계약기간 6개월"));
+assert(firstText(answer("월급은 얼마예요?")).includes("2,156,880원"));
+assert(firstText(answer("직장가입자인데 신청해도 되나요")).includes("직장가입자"));
+assert(firstText(answer("어떤 서류를 준비해야 하나요")).includes("참여신청서"));
+assert(firstText(answer("작년에도 했는데 올해 또 참여할 수 있나요")).includes("최대 2년"));
+assert(firstText(answer("동점이면 누가 먼저 뽑혀요")).includes("1순위"));
 
 // 전화 버튼
 const call = answer("상담사 연결");
@@ -41,7 +55,7 @@ assert(firstText(unknown).includes("찾지 못했습니다"));
 assert(unknown.template.outputs[1].basicCard);
 
 // 카카오 규칙 확인: 모든 답변에서 버튼 이름 14자 이하, 10개 이하, 글자 수 1000자 이하
-for (const q of ["처음으로", "장애인일자리사업", "선발 절차", "참여 조건", "모집 기관", "모집 기간", "고용업무", "상담사 연결"]) {
+for (const q of ["처음으로", "장애인일자리사업", ...jobLabels.slice(0, -1), "고용업무", "상담사 연결"]) {
   const r = answer(q);
   assert(r.template.quickReplies.length <= 10);
   r.template.quickReplies.forEach((b) => assert(b.label.length <= 14, b.label));
