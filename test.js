@@ -8,7 +8,7 @@ const labels = (r) => r.template.quickReplies.map((q) => q.label);
 // 첫 인사: 상위 메뉴 버튼이 나온다
 const home = answer("처음으로");
 assert(firstText(home).includes("안내 챗봇"));
-assert.deepStrictEqual(labels(home), ["장애인일자리사업", "고용업무", "상담사 연결", "처음으로"]);
+assert.deepStrictEqual(labels(home), ["장애인일자리사업", "고용업무", "직업평가 문의", "상담사 연결", "처음으로"]);
 assert(firstText(answer("")).includes("안내 챗봇"));
 assert(firstText(answer("웰컴")).includes("안내 챗봇"));
 
@@ -51,8 +51,10 @@ assert(firstText(answer("취업 후 적응지도")).includes("계속 유지"));
 assert(firstText(answer("구인 업체 안내")).includes("한국장애인고용공단"));
 assert(firstText(answer("이력서 써 주나요")).includes("자기소개서"));
 assert(firstText(answer("면접 준비 어떻게 해요")).includes("모의 면접"));
-// 직업평가는 고용업무 범위가 아니므로 답을 찾지 못해야 한다
-assert(firstText(answer("직업평가는 어떻게 받나요")).includes("찾지 못했습니다"));
+// 직업평가는 문의 번호만 안내한다
+assert(firstText(answer("직업평가는 어떻게 받나요")).includes("031-467-7366"));
+assert(firstText(answer("직업평가 문의")).includes("031-467-7366"));
+assert.strictEqual(answer("직업평가 문의").template.outputs[1].basicCard.buttons[0].phoneNumber, "0314677366");
 assert(firstText(answer("장애인 직원을 뽑고 싶은 사업주입니다")).includes("고용제도"));
 assert(firstText(answer("취업하고 나서도 도와주나요")).includes("유지"));
 
@@ -79,7 +81,7 @@ assert(firstText(unknown).includes("찾지 못했습니다"));
 assert(unknown.template.outputs[1].basicCard);
 
 // 카카오 규칙 확인: 모든 답변에서 버튼 이름 14자 이하, 10개 이하, 글자 수 1000자 이하
-for (const q of ["처음으로", "장애인일자리사업", ...jobLabels.slice(0, -1), "고용업무", ...empLabels.slice(0, -1), "상담사 연결"]) {
+for (const q of ["처음으로", "장애인일자리사업", ...jobLabels.slice(0, -1), "고용업무", ...empLabels.slice(0, -1), "직업평가 문의", "상담사 연결"]) {
   const r = answer(q);
   assert(r.template.quickReplies.length <= 10);
   r.template.quickReplies.forEach((b) => assert(b.label.length <= 14, b.label));
