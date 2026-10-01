@@ -10,6 +10,7 @@ const home = answer("처음으로");
 assert(firstText(home).includes("안내 챗봇"));
 assert.deepStrictEqual(labels(home), ["장애인일자리사업", "고용업무", "상담사 연결", "처음으로"]);
 assert(firstText(answer("")).includes("안내 챗봇"));
+assert(firstText(answer("웰컴")).includes("안내 챗봇"));
 
 // 상위 메뉴를 누르면 하위 메뉴 버튼이 나온다
 const jobs = answer("장애인일자리사업");

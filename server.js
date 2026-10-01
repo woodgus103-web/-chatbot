@@ -8,7 +8,7 @@ const path = require("path");
 
 const CONTENT_PATH = path.join(__dirname, "content.json");
 const PORT = process.env.PORT || 3000;
-const HOME_WORDS = ["처음으로", "시작", "메뉴", "안녕", "안녕하세요", "도움말"];
+const HOME_WORDS = ["처음으로", "시작", "메뉴", "안녕", "안녕하세요", "도움말", "웰컴", "welcome", "Welcome"];
 
 function loadContent() {
   // 요청마다 다시 읽어서, 내용을 고치면 서버를 다시 켜지 않아도 반영된다.
