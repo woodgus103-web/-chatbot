@@ -33,6 +33,21 @@ assert(firstText(answer("참여 제외 대상")).includes("직장가입자"));
 assert(firstText(answer("급여·근무시간")).includes("2,156,880원"));
 assert(firstText(answer("반복참여 제한")).includes("최대 2년"));
 
+// 고용업무
+const empLabels = ["고용업무 소개", "이용 신청 방법", "직업평가", "구직 상담", "취업 알선", "취업 후 적응지도", "구인 업체 안내", "처음으로"];
+assert.deepStrictEqual(labels(answer("고용업무")), empLabels);
+assert.deepStrictEqual(labels(answer("구직 상담")), empLabels);
+assert(firstText(answer("고용업무 소개")).includes("만 19세 이상"));
+assert(firstText(answer("이용 신청 방법")).includes("상담 일정을 조율"));
+assert(firstText(answer("구직 상담")).includes("모의 면접"));
+assert(firstText(answer("취업 알선")).includes("구인포털"));
+assert(firstText(answer("취업 후 적응지도")).includes("계속 유지"));
+assert(firstText(answer("구인 업체 안내")).includes("한국장애인고용공단"));
+assert(firstText(answer("이력서 써 주나요")).includes("자기소개서"));
+assert(firstText(answer("면접 준비 어떻게 해요")).includes("모의 면접"));
+assert(firstText(answer("장애인 직원을 뽑고 싶은 사업주입니다")).includes("고용제도"));
+assert(firstText(answer("취업하고 나서도 도와주나요")).includes("유지"));
+
 // 문장으로 물었을 때(키워드 찾기)
 assert(firstText(answer("장애인일자리 선발 절차가 어떻게 되나요?")).includes("서류심사"));
 assert(firstText(answer("지원형은 언제 모집해요?")).includes("지원형: 4월"));
@@ -48,7 +63,8 @@ assert(firstText(answer("동점이면 누가 먼저 뽑혀요")).includes("1순�
 // 전화 버튼
 const call = answer("상담사 연결");
 assert.strictEqual(call.template.outputs[1].basicCard.buttons[0].phoneNumber, "0314677361");
-assert(answer("고용업무").template.outputs[1].basicCard);
+assert(answer("이용 신청 방법").template.outputs[1].basicCard);
+assert(answer("직업평가").template.outputs[1].basicCard);
 
 // 모르는 질문은 안내 후 전화 카드
 const unknown = answer("오늘 날씨 어때요");
@@ -56,7 +72,7 @@ assert(firstText(unknown).includes("찾지 못했습니다"));
 assert(unknown.template.outputs[1].basicCard);
 
 // 카카오 규칙 확인: 모든 답변에서 버튼 이름 14자 이하, 10개 이하, 글자 수 1000자 이하
-for (const q of ["처음으로", "장애인일자리사업", ...jobLabels.slice(0, -1), "고용업무", "상담사 연결"]) {
+for (const q of ["처음으로", "장애인일자리사업", ...jobLabels.slice(0, -1), "고용업무", ...empLabels.slice(0, -1), "상담사 연결"]) {
   const r = answer(q);
   assert(r.template.quickReplies.length <= 10);
   r.template.quickReplies.forEach((b) => assert(b.label.length <= 14, b.label));
