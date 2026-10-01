@@ -47,7 +47,7 @@ assert(firstText(answer("동점이면 누가 먼저 뽑혀요")).includes("1순�
 
 // 전화 버튼
 const call = answer("상담사 연결");
-assert.strictEqual(call.template.outputs[1].basicCard.buttons[0].phoneNumber, "0314677300");
+assert.strictEqual(call.template.outputs[1].basicCard.buttons[0].phoneNumber, "0314677361");
 assert(answer("고용업무").template.outputs[1].basicCard);
 
 // 모르는 질문은 안내 후 전화 카드

@@ -53,8 +53,8 @@ function callCard(org) {
   return {
     basicCard: {
       title: `${org.이름} ${org.팀}`,
-      description: `대표번호 ${org.대표번호}\n${org.운영시간}`,
-      buttons: [{ action: "phone", label: "전화 걸기", phoneNumber: org.대표번호.replace(/-/g, "") }],
+      description: `문의 전화 ${org.문의번호}\n${org.운영시간}`,
+      buttons: [{ action: "phone", label: "전화 걸기", phoneNumber: org.문의번호.replace(/-/g, "") }],
     },
   };
 }
