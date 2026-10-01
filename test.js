@@ -8,7 +8,7 @@ const labels = (r) => r.template.quickReplies.map((q) => q.label);
 // 첫 인사: 상위 메뉴 버튼이 나온다
 const home = answer("처음으로");
 assert(firstText(home).includes("안내 챗봇"));
-assert.deepStrictEqual(labels(home), ["장애인일자리사업", "민간일자리 취업지원", "직업평가 문의", "상담사 연결", "처음으로"]);
+assert.deepStrictEqual(labels(home), ["장애인일자리사업", "민간일자리 취업지원", "직업평가 문의", "상담 신청", "상담사 연결", "처음으로"]);
 assert(firstText(answer("")).includes("안내 챗봇"));
 assert(firstText(answer("웰컴")).includes("안내 챗봇"));
 
@@ -83,6 +83,30 @@ assert(firstText(answer("어떤 서류를 준비해야 하나요")).includes("�
 assert(firstText(answer("작년에도 했는데 올해 또 참여할 수 있나요")).includes("최대 2년"));
 assert(firstText(answer("동점이면 누가 먼저 뽑혀요")).includes("1순위"));
 
+// 상담 신청 (양식 링크가 없으면 준비 중 안내와 전화 카드)
+const apply = answer("상담 신청");
+assert(firstText(apply).includes("준비 중"));
+assert(apply.template.outputs[1].basicCard.buttons[0].action === "phone");
+assert(firstText(answer("주말에 연락 주세요")).includes("준비 중"));
+// 양식 링크가 있으면 링크 카드가 붙는다
+const fsx = require("fs");
+const saved = fsx.readFileSync("content.json", "utf8");
+const withLink = JSON.parse(saved);
+withLink.메뉴.find((m) => m.제목 === "상담 신청").링크.주소 = "https://example.com/form";
+fsx.writeFileSync("content.json", JSON.stringify(withLink));
+try {
+  const r = answer("상담 신청");
+  assert(firstText(r).includes("개인정보 수집·이용 동의"));
+  assert.strictEqual(r.template.outputs[1].basicCard.buttons[0].webLinkUrl, "https://example.com/form");
+  assert.strictEqual(r.template.outputs[1].basicCard.buttons[0].action, "webLink");
+  // https가 아닌 주소는 사용하지 않는다
+  withLink.메뉴.find((m) => m.제목 === "상담 신청").링크.주소 = "http://example.com/form";
+  fsx.writeFileSync("content.json", JSON.stringify(withLink));
+  assert(firstText(answer("상담 신청")).includes("준비 중"));
+} finally {
+  fsx.writeFileSync("content.json", saved);
+}
+
 // 전화 버튼
 const call = answer("상담사 연결");
 assert.strictEqual(call.template.outputs[1].basicCard.buttons[0].phoneNumber, "0314677361");
@@ -94,7 +118,7 @@ assert(firstText(unknown).includes("찾지 못했습니다"));
 assert(unknown.template.outputs[1].basicCard);
 
 // 카카오 규칙 확인: 모든 답변에서 버튼 이름 14자 이하, 10개 이하, 글자 수 1000자 이하
-for (const q of ["처음으로", "장애인일자리사업", ...jobLabels.slice(0, -1), "민간일자리 취업지원", ...empLabels.slice(0, -1), "직업평가 문의", "상담사 연결"]) {
+for (const q of ["처음으로", "장애인일자리사업", ...jobLabels.slice(0, -1), "민간일자리 취업지원", ...empLabels.slice(0, -1), "직업평가 문의", "상담 신청", "상담사 연결"]) {
   const r = answer(q);
   assert(r.template.quickReplies.length <= 10);
   r.template.quickReplies.forEach((b) => assert(b.label.length <= 14, b.label));

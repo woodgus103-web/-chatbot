@@ -54,6 +54,16 @@ function imageOutput(baseUrl, img) {
   return { simpleImage: { imageUrl: `${baseUrl}/images/${encodeURIComponent(img.파일)}`, altText: img.설명 } };
 }
 
+function linkCard(link) {
+  return {
+    basicCard: {
+      title: link.카드제목,
+      description: link.카드설명,
+      buttons: [{ action: "webLink", label: link.버튼, webLinkUrl: link.주소 }],
+    },
+  };
+}
+
 function callCard(org, key = "문의번호") {
   const number = org[key];
   return {
@@ -102,7 +112,12 @@ function answer(utterance, baseUrl = "") {
   if (!node) return reply([text(fillTemplate(content.답변못찾음, org)), callCard(org)], buttonsFor(top));
 
   const { item, parent } = node;
-  const outputs = [text(fillTemplate(item.답변, org))];
+  let outputs = [text(fillTemplate(item.답변, org))];
+  // 외부 링크(예: 상담 신청 양식)가 있으면 카드로 붙인다. 주소가 https로 시작하지 않으면 '준비 중' 안내를 보낸다.
+  if (item.링크) {
+    if (/^https:\/\//.test(item.링크.주소 || "")) outputs.push(linkCard(item.링크));
+    else outputs = [text(fillTemplate(item.링크.준비중답변, org)), callCard(org)];
+  }
   // 그림이 있으면 글 안내 뒤에 붙인다. 글이 먼저 나가므로 그림이 안 보이는 환경에서도 내용을 알 수 있다.
   if (baseUrl && item.이미지) for (const img of item.이미지) outputs.push(imageOutput(baseUrl, img));
   if (item.전화버튼) outputs.push(callCard(org, item.문의번호키 || (parent && parent.문의번호키) || "문의번호"));

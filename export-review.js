@@ -8,6 +8,7 @@ const lines = [`# ${org.이름} ${org.팀} 안내 챗봇 검토용 문구`, "", 
 const walk = (items, depth) => {
   for (const m of items) {
     lines.push(`${"#".repeat(depth)} ${m.제목}`, "", fill(m.답변), "");
+    if (m.링크) lines.push(`(양식 링크 버튼: ${m.링크.주소 || "아직 연결 전. 양식 준비 후 연결"})`, "");
     if (m.전화버튼) lines.push(`(전화 걸기 버튼: ${org.문의번호})`, "");
     if (m.하위) walk(m.하위, depth + 1);
   }
