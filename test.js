@@ -187,4 +187,24 @@ for (const [name, iso] of Object.entries(CLOSED_TIMES)) {
 // 운영시간 중에도 직접 입력하면 연락 요청 안내를 볼 수 있다
 assert(firstText(answer("연락 요청")).includes("개인정보 수집·이용 동의") || firstText(answer("연락 요청")).includes("준비 중"));
 
+// 카카오 규격: 카드(basicCard)에는 thumbnail 그림이 꼭 있어야 하고, 그림 파일은 서버에 있어야 한다.
+{
+  const pathx = require("path");
+  const names = [];
+  (function walk(items) { for (const m of items) { names.push(m.제목); if (m.하위) walk(m.하위); } })(JSON.parse(fsx.readFileSync("content.json", "utf8")).메뉴);
+  let cards = 0;
+  for (const when of [OPEN, new Date("2026-10-06T19:00:00+09:00")]) {
+    for (const q of ["처음으로", "오늘 날씨 어때요", ...names]) {
+      for (const o of answer(q, "https://example.com", when).template.outputs) {
+        if (!o.basicCard) continue;
+        cards++;
+        const img = o.basicCard.thumbnail && o.basicCard.thumbnail.imageUrl;
+        assert(img && img.startsWith("https://example.com/images/"), `카드 그림 없음: ${q}`);
+        assert(fsx.existsSync(pathx.join("public", "images", pathx.basename(img))), `카드 그림 파일 없음: ${img}`);
+      }
+    }
+  }
+  assert(cards > 0);
+}
+
 console.log("모든 시험을 통과했다.");

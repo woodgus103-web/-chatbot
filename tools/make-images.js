@@ -73,9 +73,41 @@ ${items}
 </body></html>`;
 }
 
+// 카카오 카드(전화·바로가기)에 붙는 작은 그림이다. 카카오 규격상 카드에는 그림이 꼭 있어야 한다. (800×400)
+const cards = [
+  { file: "card-phone.png", color: "#1F4E8C", icon: "☎", title: "전화로 문의", sub: "희망나래장애인복지관 직업지원팀" },
+  { file: "card-form.png", color: "#1B6B5A", icon: '<svg width="140" height="100" viewBox="0 0 140 100"><rect x="4" y="4" width="132" height="92" rx="10" fill="none" stroke="#fff" stroke-width="8"/><path d="M8 12 L70 58 L132 12" fill="none" stroke="#fff" stroke-width="8" stroke-linejoin="round"/></svg>', title: "연락 요청", sub: "희망나래장애인복지관 직업지원팀" },
+];
+
+function cardHtml(c) {
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<link rel="stylesheet" href="file://${FONT_DIR}/500.css">
+<link rel="stylesheet" href="file://${FONT_DIR}/700.css">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { width: 800px; height: 400px; background: ${c.color}; color: #ffffff; font-family: 'Noto Sans KR', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+  .icon { font-size: 110px; line-height: 1; }
+  .title { font-size: 64px; font-weight: 700; }
+  .sub { font-size: 30px; font-weight: 500; opacity: 0.9; }
+</style></head><body>
+<div class="icon">${c.icon}</div><div class="title">${c.title}</div><div class="sub">${c.sub}</div>
+</body></html>`;
+}
+
 (async () => {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const browser = await chromium.launch();
+  const cardPage = await browser.newPage({ viewport: { width: 800, height: 400 }, deviceScaleFactor: 1 });
+  for (const c of cards) {
+    const tmp = path.join(OUT_DIR, "_tmp.html");
+    fs.writeFileSync(tmp, cardHtml(c), "utf8");
+    await cardPage.goto("file://" + tmp);
+    await cardPage.evaluate(() => document.fonts.ready);
+    await cardPage.waitForTimeout(500);
+    await cardPage.screenshot({ path: path.join(OUT_DIR, c.file) });
+    fs.unlinkSync(tmp);
+    console.log("저장:", c.file);
+  }
   const page = await browser.newPage({ viewport: { width: 900, height: 800 }, deviceScaleFactor: 1 });
   for (const sheet of sheets) {
     const tmp = path.join(OUT_DIR, "_tmp.html");

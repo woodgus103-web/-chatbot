@@ -70,22 +70,29 @@ function imageOutput(baseUrl, img) {
   return { simpleImage: { imageUrl: `${baseUrl}/images/${encodeURIComponent(img.파일)}`, altText: img.설명 } };
 }
 
-function linkCard(link) {
+// 카카오 규격상 카드(basicCard)에는 그림(thumbnail)이 꼭 있어야 한다. 그림 주소는 서버 주소가 있을 때만 붙인다.
+function thumbnail(baseUrl, file) {
+  return baseUrl ? { thumbnail: { imageUrl: `${baseUrl}/images/${file}` } } : {};
+}
+
+function linkCard(link, baseUrl = "") {
   return {
     basicCard: {
       title: link.카드제목,
       description: link.카드설명,
+      ...thumbnail(baseUrl, "card-form.png"),
       buttons: [{ action: "webLink", label: link.버튼, webLinkUrl: link.주소 }],
     },
   };
 }
 
-function callCard(org, key = "문의번호") {
+function callCard(org, key = "문의번호", baseUrl = "") {
   const number = org[key];
   return {
     basicCard: {
       title: `${org.이름} ${org.팀}`,
       description: `문의 전화 ${number}\n${org.운영시간}`,
+      ...thumbnail(baseUrl, "card-phone.png"),
       buttons: [{ action: "phone", label: "전화 걸기", phoneNumber: number.replace(/-/g, "") }],
     },
   };
@@ -138,7 +145,7 @@ function answer(utterance, baseUrl = "", now = new Date()) {
 
   const node = findNode(flat, u);
   if (!node) {
-    return reply([text(withNotice(fillTemplate(content.답변못찾음, org), content, org, open)), callCard(org)], buttonsFor(top, open, afterHours));
+    return reply([text(withNotice(fillTemplate(content.답변못찾음, org), content, org, open)), callCard(org, "문의번호", baseUrl)], buttonsFor(top, open, afterHours));
   }
 
   const { item, parent } = node;
@@ -147,12 +154,12 @@ function answer(utterance, baseUrl = "", now = new Date()) {
   let outputs = [text(hasPhone && !item.운영시간외에만표시 ? withNotice(base, content, org, open) : base)];
   // 외부 링크(예: 연락 요청 양식)가 있으면 카드로 붙인다. 주소가 https로 시작하지 않으면 '준비 중' 안내를 보낸다.
   if (item.링크) {
-    if (/^https:\/\//.test(item.링크.주소 || "")) outputs.push(linkCard(item.링크));
-    else outputs = [text(fillTemplate(item.링크.준비중답변, org)), callCard(org)];
+    if (/^https:\/\//.test(item.링크.주소 || "")) outputs.push(linkCard(item.링크, baseUrl));
+    else outputs = [text(fillTemplate(item.링크.준비중답변, org)), callCard(org, "문의번호", baseUrl)];
   }
   // 그림이 있으면 글 안내 뒤에 붙인다. 글이 먼저 나가므로 그림이 안 보이는 환경에서도 내용을 알 수 있다.
   if (baseUrl && item.이미지) for (const img of item.이미지) outputs.push(imageOutput(baseUrl, img));
-  if (item.전화버튼) outputs.push(callCard(org, item.문의번호키 || (parent && parent.문의번호키) || "문의번호"));
+  if (item.전화버튼) outputs.push(callCard(org, item.문의번호키 || (parent && parent.문의번호키) || "문의번호", baseUrl));
 
   // 하위 메뉴가 있으면 그 메뉴를, 없으면 같은 단계의 다른 메뉴를 버튼으로 보여준다.
   const buttons = item.하위 ? buttonsFor(item.하위, open, afterHours) : buttonsFor(parent ? parent.하위 : top, open, afterHours);
