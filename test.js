@@ -87,30 +87,42 @@ assert(firstText(answer("어떤 서류를 준비해야 하나요")).includes("�
 assert(firstText(answer("작년에도 했는데 올해 또 참여할 수 있나요")).includes("최대 2년"));
 assert(firstText(answer("동점이면 누가 먼저 뽑혀요")).includes("1순위"));
 
-// 연락 요청 (양식 링크가 없으면 준비 중 안내와 전화 카드)
-const apply = answer("연락 요청");
-assert(firstText(apply).includes("준비 중"));
-assert(apply.template.outputs[1].basicCard.buttons[0].action === "phone");
-assert(firstText(answer("주말에 연락 주세요")).includes("준비 중"));
-assert(firstText(answer("콜백 부탁드려요")).includes("준비 중"));
-// 양식 링크가 있으면 링크 카드가 붙는다
+// 연락 요청: 양식 주소를 바꿔 가며 시험한다. (시험 뒤에는 content.json을 원래대로 되돌린다.)
 const fsx = require("fs");
-const saved = fsx.readFileSync("content.json", "utf8");
-const withLink = JSON.parse(saved);
-withLink.메뉴.find((m) => m.제목 === "연락 요청").링크.주소 = "https://example.com/form";
-fsx.writeFileSync("content.json", JSON.stringify(withLink));
-try {
+const savedContent = fsx.readFileSync("content.json", "utf8");
+function withFormAddress(address, fn) {
+  const data = JSON.parse(savedContent);
+  data.메뉴.find((m) => m.제목 === "연락 요청").링크.주소 = address;
+  fsx.writeFileSync("content.json", JSON.stringify(data));
+  try {
+    fn();
+  } finally {
+    fsx.writeFileSync("content.json", savedContent);
+  }
+}
+// 1) 양식 주소가 없으면 준비 중 안내와 전화 카드
+withFormAddress("", () => {
+  const apply = answer("연락 요청");
+  assert(firstText(apply).includes("준비 중"));
+  assert(apply.template.outputs[1].basicCard.buttons[0].action === "phone");
+  assert(firstText(answer("주말에 연락 주세요")).includes("준비 중"));
+  assert(firstText(answer("콜백 부탁드려요")).includes("준비 중"));
+});
+// 2) https 주소가 아니면 사용하지 않는다
+withFormAddress("http://example.com/form", () => {
+  assert(firstText(answer("연락 요청")).includes("준비 중"));
+});
+// 3) https 주소가 있으면 양식 바로가기 카드가 붙는다
+withFormAddress("https://example.com/form", () => {
   const r = answer("연락 요청");
   assert(firstText(r).includes("개인정보 수집·이용 동의"));
   assert.strictEqual(r.template.outputs[1].basicCard.buttons[0].webLinkUrl, "https://example.com/form");
   assert.strictEqual(r.template.outputs[1].basicCard.buttons[0].action, "webLink");
-  // https가 아닌 주소는 사용하지 않는다
-  withLink.메뉴.find((m) => m.제목 === "연락 요청").링크.주소 = "http://example.com/form";
-  fsx.writeFileSync("content.json", JSON.stringify(withLink));
-  assert(firstText(answer("연락 요청")).includes("준비 중"));
-} finally {
-  fsx.writeFileSync("content.json", saved);
-}
+});
+// 4) 실제로 설정된 주소는 https로 시작해야 한다
+const realLink = JSON.parse(savedContent).메뉴.find((m) => m.제목 === "연락 요청").링크.주소;
+assert(realLink === "" || realLink.startsWith("https://"), "연락 요청 양식 주소 형식 오류");
+if (realLink) assert.strictEqual(answer("연락 요청").template.outputs[1].basicCard.buttons[0].webLinkUrl, realLink);
 
 // 전화 버튼
 const call = answer("상담사 연결");
@@ -173,6 +185,6 @@ for (const [name, iso] of Object.entries(CLOSED_TIMES)) {
   }
 }
 // 운영시간 중에도 직접 입력하면 연락 요청 안내를 볼 수 있다
-assert(firstText(answer("연락 요청")).includes("준비 중"));
+assert(firstText(answer("연락 요청")).includes("개인정보 수집·이용 동의") || firstText(answer("연락 요청")).includes("준비 중"));
 
 console.log("모든 시험을 통과했다.");
